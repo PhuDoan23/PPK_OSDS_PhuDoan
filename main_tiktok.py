@@ -15,7 +15,22 @@ import os
 MY_PROFILE_PATH = r"c:\Users\Admin\AppData\Roaming\Mozilla\Firefox\Profiles\3k9cekk1.default-release" 
 GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
 FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
+TARGET_CREATOR_COUNT = 3 # Số Creator muốn lấy
 #---------------------------
+
+#Hàm hỗ trợ 
+def random_sleep(min_s = 2, max_s = 4):
+    time.sleep(random.uniform(min_s, max_s))
+
+def safe_click(driver, xpath, retries=3):
+    for i in range(retries):
+        element = WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, xpath)))
+        driver.excute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+        time.sleep(1)
+        driver.execute_script("argument[0].click();", element)
+        return True
+    
+
 
 
 # --- 3. KHỞI TẠO DRIVER ---
