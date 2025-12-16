@@ -42,7 +42,20 @@ def extract_creator_data(card):
 
     }
 
+    try:
+        #Lấy index
+        data["Index"] = card.get_attribute("data-index")
 
+        #ID
+        try:
+            id_elm = card.find_element(By.XPATH, ".//div[contains(@class, 'text-black') and contains(@class, 'font-semibold')]//div[contains(@class, 'truncated_text-single')]")
+            data["ID"] = id_elm.text.strip()
+        except:
+            pass
+    
+    
+    except:
+        pass
 
 
 # --- 3. KHỞI TẠO DRIVER ---
