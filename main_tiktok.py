@@ -24,12 +24,24 @@ def random_sleep(min_s = 2, max_s = 4):
 
 def safe_click(driver, xpath, retries=3):
     for i in range(retries):
-        element = WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, xpath)))
-        driver.excute_script("arguments[0].scrollIntoView({block: 'center'});", element)
-        time.sleep(1)
-        driver.execute_script("argument[0].click();", element)
-        return True
-    
+        try:
+            element = WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, xpath)))
+            driver.excute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+            time.sleep(1)
+            driver.execute_script("argument[0].click();", element)
+            return True
+        except:
+            time.sleep(1)
+    return False
+
+def extract_creator_data(card):
+    data = {
+        "Index": "N/A",
+        "ID": "N/A",
+        "Name": "N/A",
+
+    }
+
 
 
 
