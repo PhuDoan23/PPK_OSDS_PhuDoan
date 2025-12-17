@@ -42,7 +42,9 @@ def extract_creator_data(card):
         "Country": "N/A",
         "Collab Score": "N/A",
         "Broadcast Score": "N/A",
-
+        "Followers": "N/A",
+        "Median Views": "N/A",
+        "Engagement": "N/A",
 
     }
 
@@ -80,6 +82,25 @@ def extract_creator_data(card):
             data["Collab Score"] = collab_elm.get_attribute("innerText").replace("Điểm cộng tác tổng thể:", "").strip()
         except: pass
 
+
+        # 5. SỐ LIỆU (Followers, Views, Engagement)
+        try:
+            # Tìm TẤT CẢ các thẻ có class "text-base font-semibold" trong Card này.
+            # Đây là class đặc trưng của số liệu, khác với class của ID (text-sm).
+            metrics = card.find_elements(By.CSS_SELECTOR, ".text-base.font-semibold")
+            
+            # Kiểm tra xem tìm được bao nhiêu số
+            if len(metrics) >= 3:
+                # Theo thứ tự giao diện TikTok: [0]=Followers, [1]=Views, [2]=Engagement
+                data["Followers"] = metrics[1].text.strip()
+                data["Median Views"] = metrics[2].text.strip()
+                data["Engagement"] = metrics[3].text.strip()
+            elif len(metrics) > 0:
+                # Trường hợp hiếm: Thiếu dữ liệu, lấy tạm cái đầu tiên
+                data["Followers"] = metrics[0].text.strip()
+        except Exception as e:
+            # print(f"Lỗi metrics: {e}")
+            pass
 
 
     except:
