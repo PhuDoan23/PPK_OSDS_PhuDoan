@@ -12,7 +12,7 @@ import re
 import os
 
 # --- 1. CẤU HÌNH --- ( Tinh chỉnh theo cá nhân)
-MY_PROFILE_PATH = r"c:\Users\Admin\AppData\Roaming\Mozilla\Firefox\Profiles\3k9cekk1.default-release" 
+MY_PROFILE_PATH = "" #cấu hình cookie của máy 
 GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
 FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
 TARGET_CREATOR_COUNT = 3 # Số Creator muốn lấy
@@ -51,6 +51,13 @@ def extract_creator_data(card):
             id_elm = card.find_element(By.XPATH, ".//div[contains(@class, 'text-black') and contains(@class, 'font-semibold')]//div[contains(@class, 'truncated_text-single')]")
             data["ID"] = id_elm.text.strip()
         except:
+            pass
+
+        #Tên
+        try:
+            name_elm = card.find_element(By.XPATH, ".//div[cotains(@class, 'text-neutral-onFillow')]//div[contains(@class, 'truncated_text-single')]")
+            data["Name"] = name_elm.text.strip()
+        except: 
             pass
     
     
