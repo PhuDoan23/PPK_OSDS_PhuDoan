@@ -12,10 +12,78 @@ import re
 import os
 
 # --- 1. CẤU HÌNH --- ( Tinh chỉnh theo cá nhân)
-MY_PROFILE_PATH = r"c:\Users\Admin\AppData\Roaming\Mozilla\Firefox\Profiles\3k9cekk1.default-release" 
+MY_PROFILE_PATH = "" #cấu hình cookie của máy 
 GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
 FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
+TARGET_CREATOR_COUNT = 3 # Số Creator muốn lấy
 #---------------------------
+
+#Hàm hỗ trợ 
+def random_sleep(min_s = 2, max_s = 4):
+    time.sleep(random.uniform(min_s, max_s))
+
+def safe_click(driver, xpath, retries=3):
+    for i in range(retries):
+        try:
+            element = WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, xpath)))
+            driver.excute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+            time.sleep(1)
+            driver.execute_script("argument[0].click();", element)
+            return True
+        except:
+            time.sleep(1)
+    return False
+
+def extract_creator_data(card):
+    data = {
+        "Index": "N/A",
+        "ID": "N/A",
+        "Name": "N/A",
+        "Country": "N/A",
+        "Collab Score": "N/A",
+        "Broadcast Score": "N/A",
+
+
+    }
+
+    try:
+        #Lấy index
+        data["Index"] = card.get_attribute("data-index")
+
+        #ID
+        try:
+            id_elm = card.find_element(By.XPATH, ".//div[contains(@class, 'text-black') and contains(@class, 'font-semibold')]//div[contains(@class, 'truncated_text-single')]")
+            data["ID"] = id_elm.text.strip()
+        except:
+            pass
+
+        #Tên
+        try:
+            name_elm = card.find_element(By.XPATH, ".//div[cotains(@class, 'text-neutral-onFillow')]//div[contains(@class, 'truncated_text-single')]")
+            data["Name"] = name_elm.text.strip()
+        except: 
+            pass
+
+
+        # Quốc gia
+        try:
+            country_elm = card.find_element(By.XPATH, ".//div[contains(@class, 'truncated_text-single') and text()= 'Việt Nam']")
+            data["Country"] = country_elm.text.strip()
+        except:
+            data["Country"] = "Unknown"
+        
+        
+        
+        ## 4. Điểm số
+        try:
+            collab_elm = card.find_element(By.XPATH, ".//*[contains(text(), 'Điểm cộng tác')]")
+            data["Collab Score"] = collab_elm.get_attribute("innerText").replace("Điểm cộng tác tổng thể:", "").strip()
+        except: pass
+
+
+
+    except:
+        pass
 
 
 # --- 3. KHỞI TẠO DRIVER ---
