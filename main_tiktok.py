@@ -40,6 +40,9 @@ def extract_creator_data(card):
         "ID": "N/A",
         "Name": "N/A",
         "Country": "N/A",
+        "Collab Score": "N/A",
+        "Broadcast Score": "N/A",
+
 
     }
 
@@ -71,7 +74,12 @@ def extract_creator_data(card):
         
         
         
-        #
+        ## 4. Điểm số
+        try:
+            collab_elm = card.find_element(By.XPATH, ".//*[contains(text(), 'Điểm cộng tác')]")
+            data["Collab Score"] = collab_elm.get_attribute("innerText").replace("Điểm cộng tác tổng thể:", "").strip()
+        except: pass
+
 
 
     except:
