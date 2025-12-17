@@ -39,6 +39,7 @@ def extract_creator_data(card):
         "Index": "N/A",
         "ID": "N/A",
         "Name": "N/A",
+        "Country": "N/A",
 
     }
 
@@ -59,8 +60,20 @@ def extract_creator_data(card):
             data["Name"] = name_elm.text.strip()
         except: 
             pass
-    
-    
+
+
+        # Quốc gia
+        try:
+            country_elm = card.find_element(By.XPATH, ".//div[contains(@class, 'truncated_text-single') and text()= 'Việt Nam']")
+            data["Country"] = country_elm.text.strip()
+        except:
+            data["Country"] = "Unknown"
+        
+        
+        
+        #
+
+
     except:
         pass
 
