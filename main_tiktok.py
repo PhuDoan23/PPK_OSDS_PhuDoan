@@ -12,12 +12,16 @@ import re
 import os
 
 # --- 1. CẤU HÌNH --- ( Tinh chỉnh theo cá nhân)
-MY_PROFILE_PATH = "" #cấu hình cookie của máy 
+# MY_PROFILE_PATH = "" #cấu hình cookie của máy 
+# GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
+# FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
+
+#cua TanPhat
+MY_PROFILE_PATH = r"c:\Users\Admin\AppData\Roaming\Mozilla\Firefox\Profiles\3k9cekk1.default-release"
 GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
 FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
-TARGET_CREATOR_COUNT = 3 # Số Creator muốn lấy
 
-TARGET_CREATOR_COUNT = 3
+TARGET_CREATOR_COUNT = 3 # Số Creator muốn lấy
 OUTPUT_FILE = "tiktok_creators_final.xlsx"
 TARGET_URL = "https://ads.tiktok.com/creative/forpartners/creator/explore?region=row"
 
