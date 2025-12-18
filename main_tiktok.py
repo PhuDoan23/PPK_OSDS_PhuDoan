@@ -170,17 +170,32 @@ while len(collected) < TARGET_CREATOR_COUNT:
     max_idx = max(current_idxs)
     if max_idx == last_max_idx:
         retry += 1
+        if retry > 6:
+            break
         driver.execute_script("arguments[0].scrollTop += 900;", container)
     else:
         retry = 0
         last_max_idx = max_idx
-
+        try:
+            driver.execute_script(
+                "arguments[0].scrollIntoView({block:'start'});",
+                container.find_element(By.CSS_SELECTOR, f"div[data-index='{max_idx}']")
+            )
+        except:
+            pass
     random_sleep(2, 4)
 
 # ===============================
 # EXPORT
 # ===============================
 df = pd.DataFrame(collected.values())
+cols = [
+    "Index", "ID", "Name", "Country",
+    "Collab Score", "Broadcast Score",
+    "Followers", "Median Views", "Engagement",
+    "Start Price", "Tags"
+]
+df = df[cols]
 df.to_excel(OUTPUT_FILE, index=False)
-
 print(f"Saved {len(df)} creators")
+print("=== DONE ===")
