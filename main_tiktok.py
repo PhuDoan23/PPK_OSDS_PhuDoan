@@ -16,7 +16,14 @@ MY_PROFILE_PATH = "" #cấu hình cookie của máy
 GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
 FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
 TARGET_CREATOR_COUNT = 3 # Số Creator muốn lấy
+
+TARGET_CREATOR_COUNT = 3
+OUTPUT_FILE = "tiktok_creators_final.xlsx"
+TARGET_URL = "https://ads.tiktok.com/creative/forpartners/creator/explore?region=row"
+
 #---------------------------
+
+
 
 #Hàm hỗ trợ 
 def random_sleep(min_s = 2, max_s = 4):
@@ -126,9 +133,54 @@ wait = WebDriverWait(driver, 20)
 action = ActionChains(driver)
 
 # Vào trang Ads
-target_url = "https://ads.tiktok.com/creative/forpartners/creator/explore?region=row"
-print(f"Truy cập: {target_url}")
-driver.get(target_url)
+print(f"Truy cập: {TARGET_URL}")
+driver.get(TARGET_URL)
 driver.maximize_window()
 time.sleep(5) 
-print("Tiêu đề trang hiện tại:", driver.title)
+
+container = wait.until(
+    EC.presence_of_element_located((By.CSS_SELECTOR, "div.virtualCardResults"))
+)
+
+collected = {}
+last_max_idx = -1
+retry = 0
+
+while len(collected) < TARGET_CREATOR_COUNT:
+    cards = container.find_elements(By.CSS_SELECTOR, "div[data-index]")
+    current_idxs = [] 
+
+    for row in cards:
+        sections = row.find_elements(
+            By.CSS_SELECTOR,
+            "section[data-testid^='ExploreCreatorCard-index']"
+        )
+
+        for section in sections:
+            info = extract_creator_data(section)
+            key = info["ID"] or f"{info['Index']}_{info['Name']}"
+
+            if key not in collected:
+                collected[key] = info
+                print(f"[OK] #{info['Index']} {info['Name']} | {info['Followers']}")
+
+    if not current_idxs:
+        break
+
+    max_idx = max(current_idxs)
+    if max_idx == last_max_idx:
+        retry += 1
+        driver.execute_script("arguments[0].scrollTop += 900;", container)
+    else:
+        retry = 0
+        last_max_idx = max_idx
+
+    random_sleep(2, 4)
+
+# ===============================
+# EXPORT
+# ===============================
+df = pd.DataFrame(collected.values())
+df.to_excel(OUTPUT_FILE, index=False)
+
+print(f"Saved {len(df)} creators")
