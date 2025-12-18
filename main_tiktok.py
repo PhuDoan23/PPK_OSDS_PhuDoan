@@ -45,6 +45,7 @@ def extract_creator_data(card):
         "Followers": "N/A",
         "Median Views": "N/A",
         "Engagement": "N/A",
+        "Start Price": "N/A",
 
     }
 
@@ -101,6 +102,18 @@ def extract_creator_data(card):
         except Exception as e:
             # print(f"Lỗi metrics: {e}")
             pass
+
+
+        # 6. GIÁ TIỀN (Start Price)
+        try:
+            # Logic: Tìm chữ "Khởi điểm từ", nhảy lên div cha, tìm div chứa số (text-base)
+            price_xpath = ".//span[contains(text(), 'Khởi điểm từ')]/ancestor::div[contains(@class, 'flex-col')]"
+            price_elm = card.find_element(By.XPATH, price_xpath)
+            # Lấy thêm đơn vị tiền tệ (VND)
+            currency = "VND" if "VND" in card.get_attribute("innerText") else ""
+            data["Start Price"] = f"{price_elm.text.strip()} {currency}"
+        except:
+            data["Start Price"] = "Thỏa thuận/Chưa đặt"
 
 
     except:
