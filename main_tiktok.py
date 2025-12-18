@@ -12,11 +12,22 @@ import re
 import os
 
 # --- 1. CẤU HÌNH --- ( Tinh chỉnh theo cá nhân)
-MY_PROFILE_PATH = "" #cấu hình cookie của máy 
+# MY_PROFILE_PATH = "" #cấu hình cookie của máy 
+# GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
+# FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
+
+#cua TanPhat
+MY_PROFILE_PATH = r"c:\Users\Admin\AppData\Roaming\Mozilla\Firefox\Profiles\3k9cekk1.default-release"
 GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
 FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
+
 TARGET_CREATOR_COUNT = 3 # Số Creator muốn lấy
+OUTPUT_FILE = "tiktok_creators_final.xlsx"
+TARGET_URL = "https://ads.tiktok.com/creative/forpartners/creator/explore?region=row"
+
 #---------------------------
+
+
 
 #Hàm hỗ trợ 
 def random_sleep(min_s = 2, max_s = 4):
@@ -139,9 +150,69 @@ wait = WebDriverWait(driver, 20)
 action = ActionChains(driver)
 
 # Vào trang Ads
-target_url = "https://ads.tiktok.com/creative/forpartners/creator/explore?region=row"
-print(f"Truy cập: {target_url}")
-driver.get(target_url)
+print(f"Truy cập: {TARGET_URL}")
+driver.get(TARGET_URL)
 driver.maximize_window()
 time.sleep(5) 
-print("Tiêu đề trang hiện tại:", driver.title)
+
+container = wait.until(
+    EC.presence_of_element_located((By.CSS_SELECTOR, "div.virtualCardResults"))
+)
+
+collected = {}
+last_max_idx = -1
+retry = 0
+
+while len(collected) < TARGET_CREATOR_COUNT:
+    cards = container.find_elements(By.CSS_SELECTOR, "div[data-index]")
+    current_idxs = [] 
+
+    for row in cards:
+        sections = row.find_elements(
+            By.CSS_SELECTOR,
+            "section[data-testid^='ExploreCreatorCard-index']"
+        )
+
+        for section in sections:
+            info = extract_creator_data(section)
+            key = info["ID"] or f"{info['Index']}_{info['Name']}"
+
+            if key not in collected:
+                collected[key] = info
+                print(f"[OK] #{info['Index']} {info['Name']} | {info['Followers']}")
+
+    if not current_idxs:
+        break
+
+    max_idx = max(current_idxs)
+    if max_idx == last_max_idx:
+        retry += 1
+        if retry > 6:
+            break
+        driver.execute_script("arguments[0].scrollTop += 900;", container)
+    else:
+        retry = 0
+        last_max_idx = max_idx
+        try:
+            driver.execute_script(
+                "arguments[0].scrollIntoView({block:'start'});",
+                container.find_element(By.CSS_SELECTOR, f"div[data-index='{max_idx}']")
+            )
+        except:
+            pass
+    random_sleep(2, 4)
+
+# ===============================
+# EXPORT
+# ===============================
+df = pd.DataFrame(collected.values())
+cols = [
+    "Index", "ID", "Name", "Country",
+    "Collab Score", "Broadcast Score",
+    "Followers", "Median Views", "Engagement",
+    "Start Price", "Tags"
+]
+df = df[cols]
+df.to_excel(OUTPUT_FILE, index=False)
+print(f"Saved {len(df)} creators")
+print("=== DONE ===")
