@@ -17,12 +17,12 @@ import os
 # FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
 
 #cua TanPhat
-MY_PROFILE_PATH = r"c:\Users\Admin\AppData\Roaming\Mozilla\Firefox\Profiles\3k9cekk1.default-release"
+#MY_PROFILE_PATH = r"c:\Users\Admin\AppData\Roaming\Mozilla\Firefox\Profiles\3k9cekk1.default-release"    Không nên public dòng này 
 GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
 FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
 
 TARGET_CREATOR_COUNT = 3 # Số Creator muốn lấy
-OUTPUT_FILE = "tiktok_creators_final.xlsx"
+OUTPUT_FILE = "tiktok_creators_final.xlsx"   #Phú lưu database đi 
 TARGET_URL = "https://ads.tiktok.com/creative/forpartners/creator/explore?region=row"
 
 #---------------------------
@@ -118,7 +118,7 @@ def extract_creator_data(card):
         # 6. GIÁ TIỀN (Start Price)
         try:
             # Logic: Tìm chữ "Khởi điểm từ", nhảy lên div cha, tìm div chứa số (text-base)
-            price_xpath = ".//span[contains(text(), 'Khởi điểm từ')]/ancestor::div[contains(@class, 'flex-col')]"
+            price_xpath = ".//span[contains(text(), 'Khởi điểm từ')]/ancestor::div[contains(@class, 'flex-col')]//div[contains(@class, 'text-base')]"
             price_elm = card.find_element(By.XPATH, price_xpath)
             # Lấy thêm đơn vị tiền tệ (VND)
             currency = "VND" if "VND" in card.get_attribute("innerText") else ""
