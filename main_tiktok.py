@@ -18,13 +18,16 @@ import os
 
 #cua TanPhat
 #MY_PROFILE_PATH = r"c:\Users\Admin\AppData\Roaming\Mozilla\Firefox\Profiles\3k9cekk1.default-release"    Không nên public dòng này 
-GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
-FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
+# GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
+# FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
 
-TARGET_CREATOR_COUNT = 3 # Số Creator muốn lấy
+# TARGET_CREATOR_COUNT = 3 # Số Creator muốn lấy
 OUTPUT_FILE = "tiktok_creators_final.xlsx"   #Phú lưu database đi 
 TARGET_URL = "https://ads.tiktok.com/creative/forpartners/creator/explore?region=row"
-
+MY_PROFILE_PATH = r"C:\Users\lihoang14\AppData\Roaming\Mozilla\Firefox\Profiles\nsrlolhq.default-release"
+FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
+GECKO_PATH = r"D:\Khanh\hoc\ma nguon mo\New folder\PPK_OSDS_Khanh\geckodriver.exe"
+TARGET_CREATOR_COUNT = 1  # Số lượng muốn lấy
 #---------------------------
 
 
@@ -61,8 +64,12 @@ def extract_creator_data(card):
     }
 
     try:
+        try:
         #Lấy index
-        data["Index"] = card.get_attribute("data-index")
+            data["Index"] = card.get_attribute("data-index")
+        except:
+            pass
+
 
         #ID
         try:
@@ -95,10 +102,13 @@ def extract_creator_data(card):
         except: pass
 
 
+        try:
+            broad_elm = card.find_element(By.XPATH, ".//*[contains(text(), 'Điểm phát sóng')]")
+            data["Broadcast Score"] = broad_elm.get_attribute("innerText").replace("Điểm phát sóng cao:", "").strip()
+        except: pass
+
         # 5. SỐ LIỆU (Followers, Views, Engagement)
         try:
-            # Tìm TẤT CẢ các thẻ có class "text-base font-semibold" trong Card này.
-            # Đây là class đặc trưng của số liệu, khác với class của ID (text-sm).
             metrics = card.find_elements(By.CSS_SELECTOR, ".text-base.font-semibold")
             
             # Kiểm tra xem tìm được bao nhiêu số
@@ -117,7 +127,6 @@ def extract_creator_data(card):
 
         # 6. GIÁ TIỀN (Start Price)
         try:
-            # Logic: Tìm chữ "Khởi điểm từ", nhảy lên div cha, tìm div chứa số (text-base)
             price_xpath = ".//span[contains(text(), 'Khởi điểm từ')]/ancestor::div[contains(@class, 'flex-col')]//div[contains(@class, 'text-base')]"
             price_elm = card.find_element(By.XPATH, price_xpath)
             # Lấy thêm đơn vị tiền tệ (VND)
@@ -131,7 +140,7 @@ def extract_creator_data(card):
         try:
             # Tìm tất cả các phần tử tag text nằm trong rc-overflow
             # Lưu ý: Tìm thẻ div có class 'truncated__text-single' nằm trong 'rc-overflow-item'
-            tag_elms = card.find_elements(By.XPATH, ".//div[contains(@class, 'rc-overflow')]")
+            tag_elms = card.find_elements(By.XPATH, ".//div[contains(@class, 'rc-overflow')]//div[contains(@class, 'rc-overflow-item')]//div[contains(@class, 'truncated__text-single')]")
             
             for t in tag_elms:
                 # Dùng 'textContent' thay vì 'text' để lấy được nội dung dù nó bị ẩn (opacity: 0)
@@ -141,12 +150,15 @@ def extract_creator_data(card):
                     tags.append(txt)
         except:
             pass
-                # Loại bỏ trùng lặp và nối chuỗi
+
+        # Loại bỏ trùng lặp và nối chuỗi
         data["Tags"] = ", ".join(list(set(tags)))
 
 
     except:
         pass
+
+    return data
 
 
 # --- 3. KHỞI TẠO DRIVER ---
