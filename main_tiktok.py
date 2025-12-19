@@ -57,7 +57,7 @@ def extract_creator_data(card):
         "Median Views": "N/A",
         "Engagement": "N/A",
         "Start Price": "N/A",
-
+        "Tags": ""
     }
 
     try:
@@ -125,6 +125,24 @@ def extract_creator_data(card):
             data["Start Price"] = f"{price_elm.text.strip()} {currency}"
         except:
             data["Start Price"] = "Thỏa thuận/Chưa đặt"
+
+        # 7. TAGS
+        tags = []
+        try:
+            # Tìm tất cả các phần tử tag text nằm trong rc-overflow
+            # Lưu ý: Tìm thẻ div có class 'truncated__text-single' nằm trong 'rc-overflow-item'
+            tag_elms = card.find_elements(By.XPATH, ".//div[contains(@class, 'rc-overflow')]")
+            
+            for t in tag_elms:
+                # Dùng 'textContent' thay vì 'text' để lấy được nội dung dù nó bị ẩn (opacity: 0)
+                txt = t.get_attribute("textContent").strip()
+                
+                if txt and len(txt) > 1 and txt != data["ID"] and txt != data["Name"] and "+" not in txt:
+                    tags.append(txt)
+        except:
+            pass
+                # Loại bỏ trùng lặp và nối chuỗi
+        data["Tags"] = ", ".join(list(set(tags)))
 
 
     except:
