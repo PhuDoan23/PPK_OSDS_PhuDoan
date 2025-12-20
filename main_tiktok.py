@@ -17,17 +17,17 @@ import os
 # FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
 
 #cua TanPhat
-#MY_PROFILE_PATH = r"c:\Users\Admin\AppData\Roaming\Mozilla\Firefox\Profiles\3k9cekk1.default-release"    Không nên public dòng này 
-# GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
-# FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
+MY_PROFILE_PATH = r"c:\Users\Admin\AppData\Roaming\Mozilla\Firefox\Profiles\3k9cekk1.default-release"    #Không nên public dòng này 
+GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
+FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
 
-# TARGET_CREATOR_COUNT = 3 # Số Creator muốn lấy
+TARGET_CREATOR_COUNT = 3 # Số Creator muốn lấy
 OUTPUT_FILE = "tiktok_creators_final.xlsx"   #Phú lưu database đi 
 TARGET_URL = "https://ads.tiktok.com/creative/forpartners/creator/explore?region=row"
-MY_PROFILE_PATH = r"C:\Users\lihoang14\AppData\Roaming\Mozilla\Firefox\Profiles\nsrlolhq.default-release"
-FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
-GECKO_PATH = r"D:\Khanh\hoc\ma nguon mo\New folder\PPK_OSDS_Khanh\geckodriver.exe"
-TARGET_CREATOR_COUNT = 1  # Số lượng muốn lấy
+# MY_PROFILE_PATH = r"C:\Users\lihoang14\AppData\Roaming\Mozilla\Firefox\Profiles\nsrlolhq.default-release"
+# FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
+# GECKO_PATH = r"D:\Khanh\hoc\ma nguon mo\New folder\PPK_OSDS_Khanh\geckodriver.exe"
+# TARGET_CREATOR_COUNT = 1  # Số lượng muốn lấy
 #---------------------------
 
 
@@ -161,6 +161,10 @@ def extract_creator_data(card):
     return data
 
 
+
+
+
+
 # --- 3. KHỞI TẠO DRIVER ---
 ser = Service(GECKO_PATH)
 options = webdriver.firefox.options.Options()
@@ -184,7 +188,49 @@ print(f"Truy cập: {TARGET_URL}")
 driver.get(TARGET_URL)
 driver.maximize_window()
 time.sleep(5) 
+    # A. Chọn Quốc Gia: Việt Nam
+    # Tìm nút mở menu Quốc gia (thường là nút filter đầu tiên)
+if safe_click(driver, "//div[contains(@class,'filter-trigger')][1]"):
+    print("Mở menu Quốc gia...")
+    time.sleep(2)
+    
+    # Chọn Việt Nam
+    vn_xpath = "//div[contains(@class, 'truncated__text') and text()='Việt Nam']"
+    if safe_click(driver, vn_xpath):
+        print(" -> Tick 'Việt Nam'")
+        time.sleep(1)
+    else:
+        print("[!] Không thấy tùy chọn Việt Nam")
 
+time.sleep(3) # Đợi reload
+
+# B. Chọn Giá: > 300 USD ổn
+# Tìm nút Giá (dựa trên class mới bạn cung cấp)
+price_trigger = "//div[contains(@class, 'filter-item-menu-label') and .//p[contains(text(), 'Giá')]]"
+fallback_trigger = "//p[text()='Giá']/ancestor::div[contains(@class, 'filter-item-menu-label')]"
+
+if safe_click(driver, price_trigger) or safe_click(driver, fallback_trigger):
+    print("Mở menu Giá...")
+    time.sleep(2)
+    
+    # Chọn > 300 USD
+    price_opt = "//li[contains(@class, 'filter-form-select__item') and contains(text(), '> 300 USD')]"
+    if safe_click(driver, price_opt):
+        print(" -> Chọn '> 300 USD'")
+        apply_xpath = "//button[contains(text(), 'Áp dụng')]"
+        safe_click(driver, apply_xpath)
+        print("Đã bấm Áp dụng.")
+    else:
+        # Dự phòng: chọn cái cuối cùng
+        safe_click(driver, "//ul[contains(@class, 'filter-form-select')]/li[last()]")
+        print(" -> Chọn mục giá cuối cùng (Fallback)")
+        
+    # Đóng menu (click ra ngoài)
+    action.move_by_offset(200, 0).click().perform()
+else:
+    print("[!] Không tìm thấy nút bộ lọc Giá")
+
+time.sleep(3)
 container = wait.until(
     EC.presence_of_element_located((By.CSS_SELECTOR, "div.virtualCardResults"))
 )
