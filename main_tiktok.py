@@ -79,15 +79,27 @@ def random_sleep(min_s = 2, max_s = 4):
 def safe_click(driver, xpath, retries=3):
     for i in range(retries):
         try:
-            element = WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.XPATH, xpath)))
-            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
-            time.sleep(1)
-            driver.execute_script("arguments[0].click();", element)
-            return True
-        except:
-            time.sleep(1)
-    return False
+            element = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, xpath))
+            )
 
+            driver.execute_script(
+                "arguments[0].scrollIntoView({block:'center'});",
+                element
+            )
+            time.sleep(0.6)
+
+            driver.execute_script(
+                "arguments[0].click();",
+                element
+            )
+            return True
+
+        except Exception as e:
+            print(f"[safe_click retry {i+1}] {e}")
+            time.sleep(1)
+
+    return False
 def extract_creator_data(card):
     """
     card = <section data-testid="ExploreCreatorCard-index-...">
@@ -156,15 +168,27 @@ def extract_creator_data(card):
     except:
         pass
 
-    # Metrics
-    try:
-        metrics = card.find_elements(By.CSS_SELECTOR, ".text-base.font-semibold")
-        if len(metrics) >= 3:
-            data["Followers"] = metrics[0].text.strip()
-            data["Median Views"] = metrics[1].text.strip()
-            data["Engagement"] = metrics[2].text.strip()
-    except:
-        pass
+        try:
+            broad_elm = card.find_element(By.XPATH, ".//*[contains(text(), 'Điểm phát sóng')]")
+            data["Broadcast Score"] = broad_elm.get_attribute("innerText").replace("Điểm phát sóng cao:", "").strip()
+        except: pass
+
+        # 5. SỐ LIỆU (Followers, Views, Engagement)
+        try:
+            metrics = card.find_elements(By.CSS_SELECTOR, ".text-base.font-semibold")
+            
+            # Kiểm tra xem tìm được bao nhiêu số
+            if len(metrics) >= 3:
+                # Theo thứ tự giao diện TikTok: [0]=Followers, [1]=Views, [2]=Engagement
+                data["Followers"] = metrics[1].text.strip()
+                data["Median Views"] = metrics[2].text.strip()
+                data["Engagement"] = metrics[3].text.strip()
+            elif len(metrics) > 0:
+                # Trường hợp hiếm: Thiếu dữ liệu, lấy tạm cái đầu tiên
+                data["Followers"] = metrics[0].text.strip()
+        except Exception as e:
+            # print(f"Lỗi metrics: {e}")
+            pass
 
     # Start Price
     try:
@@ -175,17 +199,44 @@ def extract_creator_data(card):
     except:
         pass
 
-    # Tags
-    try:
-        tags = card.find_elements(
-            By.CSS_SELECTOR,
-            ".bg-support-surface2 .truncated__text-single"
-        )
-        data["Tags"] = ", ".join(sorted({t.text.strip() for t in tags if t.text.strip()}))
+        # 6. GIÁ TIỀN (Start Price)
+        try:
+            price_xpath = ".//span[contains(text(), 'Khởi điểm từ')]/ancestor::div[contains(@class, 'flex-col')]//div[contains(@class, 'text-base')]"
+            price_elm = card.find_element(By.XPATH, price_xpath)
+            # Lấy thêm đơn vị tiền tệ (VND)
+            currency = "VND" if "VND" in card.get_attribute("innerText") else ""
+            data["Start Price"] = f"{price_elm.text.strip()} {currency}"
+        except:
+            data["Start Price"] = "Thỏa thuận/Chưa đặt"
+
+        # 7. TAGS
+        tags = []
+        try:
+            # Tìm tất cả các phần tử tag text nằm trong rc-overflow
+            # Lưu ý: Tìm thẻ div có class 'truncated__text-single' nằm trong 'rc-overflow-item'
+            tag_elms = card.find_elements(By.XPATH, ".//div[contains(@class, 'rc-overflow')]//div[contains(@class, 'rc-overflow-item')]//div[contains(@class, 'truncated__text-single')]")
+            
+            for t in tag_elms:
+                # Dùng 'textContent' thay vì 'text' để lấy được nội dung dù nó bị ẩn (opacity: 0)
+                txt = t.get_attribute("textContent").strip()
+                
+                if txt and len(txt) > 1 and txt != data["ID"] and txt != data["Name"] and "+" not in txt:
+                    tags.append(txt)
+        except:
+            pass
+
+        # Loại bỏ trùng lặp và nối chuỗi
+        data["Tags"] = ", ".join(list(set(tags)))
+
+
     except:
         pass
 
     return data
+
+
+
+
 
 
 # --- 3. KHỞI TẠO DRIVER ---
@@ -398,6 +449,57 @@ else:
 driver.get(TARGET_URL)
 driver.maximize_window()
 time.sleep(5) 
+    # A. Chọn Quốc Gia: Việt Nam
+    # Tìm nút mở menu Quốc gia (thường là nút filter đầu tiên)
+# 1. Mở menu Quốc gia
+# Tìm nút có class filter-trigger đầu tiên hoặc chứa text 'Quốc gia'
+trigger_xpath = "//div[contains(@class,'filter-trigger')][1]" 
+if safe_click(driver, trigger_xpath):
+    print("Đã mở menu Quốc gia.")
+    time.sleep(2) # Chờ menu bung ra hoàn toàn
+    # 2. Chọn Việt Nam (
+    # XPath tìm thẻ div chứa text "Việt Nam"
+    vn_xpath = "//div[contains(@class, 'truncated__text') and text()='Việt Nam']"
+    is_clicked = safe_click(driver, vn_xpath)
+    if is_clicked:
+        print("Đã chọn 'Việt Nam'.")
+        time.sleep(1)
+    else:
+        print("[!] Không thấy tùy chọn Việt Nam")
+else:
+    print("Không mở được menu Quốc gia.")
+time.sleep(3) # Đợi reload
+
+# B. Chọn Giá: > 300 USD ổn
+# Tìm nút Giá (dựa trên class mới bạn cung cấp)
+price_trigger_xpath = "//div[contains(@class, 'filter-item-menu-label') and .//p[contains(text(), 'Giá')]]"
+# Nếu không tìm thấy bằng class, dùng XPath dự phòng tìm theo text đơn giản
+backup_trigger_xpath = "//p[text()='Giá']/ancestor::div[contains(@class, 'filter-item-menu-label')]"
+if safe_click(driver, price_trigger_xpath) or safe_click(driver, backup_trigger_xpath):
+    print("Đã mở menu Giá.")
+    time.sleep(2) # Chờ menu bung ra
+
+    # 2. Chọn "> 300 USD"
+    price_option_xpath = "//li[contains(@class, 'filter-form-select__item') and contains(text(), '> 300 USD')]"
+    is_price_clicked = safe_click(driver, price_option_xpath)
+    
+    if is_price_clicked:
+        apply_xpath = "//button[contains(text(), 'Áp dụng')]"
+        safe_click(driver, apply_xpath)
+        print("Đã bấm Áp dụng.")
+    else:
+        print("Không tìm thấy text '> 300 USD', thử chọn mục cuối cùng...")
+
+    # 3. Đóng menu
+    time.sleep(1)
+    try:
+        # Click vào khoảng trống bên phải nút Giá (move offset) hoặc click body
+        action.move_by_offset(200, 0).click().perform()
+    except:
+        pass
+
+else:
+    print("LỖI: Không tìm thấy nút bấm 'Giá' (Class: filter-item-menu-label).")
 
 try:
     container = wait.until(
@@ -467,6 +569,10 @@ except TimeoutException:
         except:
             pass
         raise
+time.sleep(3)
+container = wait.until(
+    EC.presence_of_element_located((By.CSS_SELECTOR, "div.virtualCardResults"))
+)
 
 collected = {}
 last_max_idx = -1
