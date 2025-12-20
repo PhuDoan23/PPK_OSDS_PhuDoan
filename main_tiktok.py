@@ -190,45 +190,55 @@ driver.maximize_window()
 time.sleep(5) 
     # A. Chọn Quốc Gia: Việt Nam
     # Tìm nút mở menu Quốc gia (thường là nút filter đầu tiên)
-if safe_click(driver, "//div[contains(@class,'filter-trigger')][1]"):
-    print("Mở menu Quốc gia...")
-    time.sleep(2)
-    
-    # Chọn Việt Nam
+# 1. Mở menu Quốc gia
+# Tìm nút có class filter-trigger đầu tiên hoặc chứa text 'Quốc gia'
+trigger_xpath = "//div[contains(@class,'filter-trigger')][1]" 
+if safe_click(driver, trigger_xpath):
+    print("Đã mở menu Quốc gia.")
+    time.sleep(2) # Chờ menu bung ra hoàn toàn
+    # 2. Chọn Việt Nam (
+    # XPath tìm thẻ div chứa text "Việt Nam"
     vn_xpath = "//div[contains(@class, 'truncated__text') and text()='Việt Nam']"
-    if safe_click(driver, vn_xpath):
-        print(" -> Tick 'Việt Nam'")
+    is_clicked = safe_click(driver, vn_xpath)
+    if is_clicked:
+        print("Đã chọn 'Việt Nam'.")
         time.sleep(1)
     else:
         print("[!] Không thấy tùy chọn Việt Nam")
-
+else:
+    print("Không mở được menu Quốc gia.")
 time.sleep(3) # Đợi reload
 
 # B. Chọn Giá: > 300 USD ổn
 # Tìm nút Giá (dựa trên class mới bạn cung cấp)
-price_trigger = "//div[contains(@class, 'filter-item-menu-label') and .//p[contains(text(), 'Giá')]]"
-fallback_trigger = "//p[text()='Giá']/ancestor::div[contains(@class, 'filter-item-menu-label')]"
+price_trigger_xpath = "//div[contains(@class, 'filter-item-menu-label') and .//p[contains(text(), 'Giá')]]"
+# Nếu không tìm thấy bằng class, dùng XPath dự phòng tìm theo text đơn giản
+backup_trigger_xpath = "//p[text()='Giá']/ancestor::div[contains(@class, 'filter-item-menu-label')]"
+if safe_click(driver, price_trigger_xpath) or safe_click(driver, backup_trigger_xpath):
+    print("Đã mở menu Giá.")
+    time.sleep(2) # Chờ menu bung ra
 
-if safe_click(driver, price_trigger) or safe_click(driver, fallback_trigger):
-    print("Mở menu Giá...")
-    time.sleep(2)
+    # 2. Chọn "> 300 USD"
+    price_option_xpath = "//li[contains(@class, 'filter-form-select__item') and contains(text(), '> 300 USD')]"
+    is_price_clicked = safe_click(driver, price_option_xpath)
     
-    # Chọn > 300 USD
-    price_opt = "//li[contains(@class, 'filter-form-select__item') and contains(text(), '> 300 USD')]"
-    if safe_click(driver, price_opt):
-        print(" -> Chọn '> 300 USD'")
+    if is_price_clicked:
         apply_xpath = "//button[contains(text(), 'Áp dụng')]"
         safe_click(driver, apply_xpath)
         print("Đã bấm Áp dụng.")
     else:
-        # Dự phòng: chọn cái cuối cùng
-        safe_click(driver, "//ul[contains(@class, 'filter-form-select')]/li[last()]")
-        print(" -> Chọn mục giá cuối cùng (Fallback)")
-        
-    # Đóng menu (click ra ngoài)
-    action.move_by_offset(200, 0).click().perform()
+        print("Không tìm thấy text '> 300 USD', thử chọn mục cuối cùng...")
+
+    # 3. Đóng menu
+    time.sleep(1)
+    try:
+        # Click vào khoảng trống bên phải nút Giá (move offset) hoặc click body
+        action.move_by_offset(200, 0).click().perform()
+    except:
+        pass
+
 else:
-    print("[!] Không tìm thấy nút bộ lọc Giá")
+    print("LỖI: Không tìm thấy nút bấm 'Giá' (Class: filter-item-menu-label).")
 
 time.sleep(3)
 container = wait.until(
