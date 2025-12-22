@@ -95,7 +95,6 @@ def save_to_mongo(data_dict):
     """
     try:
         # Sử dụng ID làm khóa chính (_id)
-        # Nếu ID bị N/A, ta dùng Name để thay thế làm khóa
         primary_key = data_dict["ID"] 
         
         if primary_key == "N/A": 
