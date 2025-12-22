@@ -17,16 +17,22 @@ from pymongo import MongoClient
 # 1. CẤU HÌNH
 # =============================================================================
 # --- Cấu hình Selenium ---
-MY_PROFILE_PATH = r"C:\Users\lihoang14\AppData\Roaming\Mozilla\Firefox\Profiles\nsrlolhq.default-release"
+# MY_PROFILE_PATH = r"C:\Users\lihoang14\AppData\Roaming\Mozilla\Firefox\Profiles\nsrlolhq.default-release"
+# FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
+# GECKO_PATH = r"D:\Khanh\hoc\ma nguon mo\New folder\PPK_OSDS_Khanh\geckodriver.exe"
+
+
+MY_PROFILE_PATH = r"c:\Users\Admin\AppData\Roaming\Mozilla\Firefox\Profiles\3k9cekk1.default-release"
+GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
 FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
-GECKO_PATH = r"D:\Khanh\hoc\ma nguon mo\New folder\PPK_OSDS_Khanh\geckodriver.exe"
+
 
 # --- Cấu hình MongoDB [NEW] ---
 MONGO_URI = "mongodb://localhost:27017/"  
 DB_NAME = "tiktok_ads_db"                
 COLLECTION_NAME = "creators_vn"           
 
-TARGET_NEW_ITEMS = 10000 # Số lượng muốn lấy
+TARGET_NEW_ITEMS = 10 # Số lượng muốn lấy
 
 # =============================================================================
 # 2. KẾT NỐI MONGODB
@@ -246,7 +252,7 @@ wait = WebDriverWait(driver, 20)
 action = ActionChains(driver)
 
 try:
-    driver.get("https://ads.tiktok.com/creative/creator/explore?region=row")
+    driver.get("https://ads.tiktok.com/creative/forpartners/creator/explore?region=row")
     driver.maximize_window()
     time.sleep(5)
 
@@ -257,8 +263,8 @@ try:
         safe_click(driver, "//div[contains(@class, 'truncated__text') and text()='Việt Nam']")
     time.sleep(3)
 
-    price_trigger = "//div[contains(@class, 'filter-item-menu-label') and .//p[contains(text(), 'Người theo dõi')]]"
-    fallback_trigger = "//p[text()='Người theo dõi']/ancestor::div[contains(@class, 'filter-item-menu-label')]"
+    price_trigger = "//div[contains(@class, 'filter-item-menu-label') and .//p[contains(text(), 'Giá')]]"
+    fallback_trigger = "//p[text()='Giá']/ancestor::div[contains(@class, 'filter-item-menu-label')]"
     if safe_click(driver, price_trigger) or safe_click(driver, fallback_trigger):
         time.sleep(1)
         if safe_click(driver, "//ul[contains(@class, 'filter-form-select')]/li[last()]"):
