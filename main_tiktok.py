@@ -30,9 +30,9 @@ FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
 # --- Cấu hình MongoDB [NEW] ---
 MONGO_URI = "mongodb://localhost:27017/"  
 DB_NAME = "tiktok_ads_db"                
-COLLECTION_NAME = "creators_vn"           
+COLLECTION_NAME = "creators_vn1"           
 
-TARGET_NEW_ITEMS = 10 # Số lượng muốn lấy
+TARGET_NEW_ITEMS = 2 # Số lượng muốn lấy
 
 # =============================================================================
 # 2. KẾT NỐI MONGODB
@@ -133,6 +133,7 @@ def extract_full_details(card_section, creator_id):
         "Engagement": "N/A",
         "Start Price": "N/A",
         "Tags": "",
+        "avatar_url" : "",
     }
     
     try:
@@ -171,7 +172,7 @@ def extract_full_details(card_section, creator_id):
         try:
             # Tìm TẤT CẢ các thẻ có class "text-base font-semibold" trong Card này.
             # Đây là class đặc trưng của số liệu, khác với class của ID (text-sm).
-            metrics = card.find_elements(By.CSS_SELECTOR, ".text-base.font-semibold")
+            metrics = card_section.find_elements(By.CSS_SELECTOR, ".text-base.font-semibold")
             
             # Kiểm tra xem tìm được bao nhiêu số
             if len(metrics) >= 3:
@@ -202,7 +203,7 @@ def extract_full_details(card_section, creator_id):
         try:
             # Tìm tất cả các phần tử tag text nằm trong rc-overflow
             # Lưu ý: Tìm thẻ div có class 'truncated__text-single' nằm trong 'rc-overflow-item'
-            tag_elms = card.find_elements(By.XPATH, ".//div[contains(@class, 'rc-overflow')]//div[contains(@class, 'rc-overflow-item')]//div[contains(@class, 'truncated__text-single')]")
+            tag_elms = card_section.find_elements(By.XPATH, ".//div[contains(@class, 'rc-overflow')]//div[contains(@class, 'rc-overflow-item')]//div[contains(@class, 'truncated__text-single')]")
             
             for t in tag_elms:
                 # Dùng 'textContent' thay vì 'text' để lấy được nội dung dù nó bị ẩn (opacity: 0)
@@ -221,6 +222,25 @@ def extract_full_details(card_section, creator_id):
         
         # Loại bỏ trùng lặp và nối chuỗi
         data["Tags"] = ", ".join(list(set(tags)))
+        
+        # 8. Avatar URL (FIXED)
+        try:
+            avatar_img = card_section.find_element(
+                By.XPATH,
+                ".//div[contains(@class,'creator-avatar__wrapper')]//img"
+            )
+
+            # Ưu tiên data-src (lazy load), fallback src
+            avatar_url = (
+                avatar_img.get_attribute("data-src")
+                or avatar_img.get_attribute("src")
+                or ""
+            )
+
+            data["avatar_url"] = avatar_url.strip()
+
+        except Exception:
+            data["avatar_url"] = ""
 
     except Exception:
         pass
@@ -261,15 +281,17 @@ try:
     if safe_click(driver, "//div[contains(@class,'filter-trigger')][1]"):
         time.sleep(1)
         safe_click(driver, "//div[contains(@class, 'truncated__text') and text()='Việt Nam']")
+        safe_click(driver, "//button[contains(text(), 'Áp dụng')]")
+
     time.sleep(3)
 
-    price_trigger = "//div[contains(@class, 'filter-item-menu-label') and .//p[contains(text(), 'Giá')]]"
-    fallback_trigger = "//p[text()='Giá']/ancestor::div[contains(@class, 'filter-item-menu-label')]"
-    if safe_click(driver, price_trigger) or safe_click(driver, fallback_trigger):
-        time.sleep(1)
-        if safe_click(driver, "//ul[contains(@class, 'filter-form-select')]/li[last()]"):
-             safe_click(driver, "//button[contains(text(), 'Áp dụng')]")
-        action.move_by_offset(200, 0).click().perform()
+    # price_trigger = "//div[contains(@class, 'filter-item-menu-label') and .//p[contains(text(), 'Giá')]]"
+    # fallback_trigger = "//p[text()='Giá']/ancestor::div[contains(@class, 'filter-item-menu-label')]"
+    # if safe_click(driver, price_trigger) or safe_click(driver, fallback_trigger):
+    #     time.sleep(1)
+    #     if safe_click(driver, "//ul[contains(@class, 'filter-form-select')]/li[last()]"):
+    #          safe_click(driver, "//button[contains(text(), 'Áp dụng')]")
+    #     action.move_by_offset(200, 0).click().perform()
     
     time.sleep(5)
 
