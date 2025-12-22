@@ -50,6 +50,72 @@ def download_image_base64(url: str) -> str | None:
     except Exception:
         return None
 
+
+# ===============================
+# MAIN WORKER
+# ===============================
+def run_worker(limit: int | None = None):
+    """
+    limit: số lượng avatar muốn xử lý (None = xử lý hết)
+    """
+
+    # Chỉ lấy creator:
+    # - có avatar_url
+    # - chưa có avatar trong collection creator_avatar
+    query = {
+        "avatar_url": {"$ne": ""}
+    }
+
+    cursor = src_col.find(query)
+
+    processed = 0
+    skipped = 0
+
+    for doc in cursor:
+        creator_id = doc.get("_id")
+        avatar_url = doc.get("avatar_url", "")
+
+        if not creator_id or not avatar_url:
+            skipped += 1
+            continue
+
+        # Nếu avatar đã tồn tại → skip
+        if avatar_col.find_one({"_id": creator_id}):
+            skipped += 1
+            continue
+
+        print(f"[FETCH] {creator_id}")
+
+        b64 = download_image_base64(avatar_url)
+        if not b64:
+            print(f" Failed image")
+            skipped += 1
+            continue
+
+        avatar_col.update_one(
+            {"_id": creator_id},
+            {
+                "$set": {
+                    "avatar_base64": b64,
+                    "avatar_url": avatar_url,
+                }
+            },
+            upsert=True
+        )
+
+        print(f"  ✅ Saved avatar ({len(b64)} chars)")
+        processed += 1
+
+        time.sleep(SLEEP_BETWEEN_REQUESTS)
+
+        if limit and processed >= limit:
+            break
+
+    print("\n=== DONE ===")
+    print(f"Processed: {processed}")
+    print(f"Skipped:   {skipped}")
+
+
 # ===============================
 # ENTRY POINT
 # ===============================
