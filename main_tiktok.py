@@ -1,6 +1,7 @@
 import time
 import random
 import re
+import requests
 import pandas as pd
 import os
 from selenium import webdriver
@@ -17,14 +18,16 @@ from pymongo import MongoClient
 # 1. CẤU HÌNH
 # =============================================================================
 # --- Cấu hình Selenium ---
-# MY_PROFILE_PATH = r"C:\Users\lihoang14\AppData\Roaming\Mozilla\Firefox\Profiles\nsrlolhq.default-release"
-# FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
-# GECKO_PATH = r"D:\Khanh\hoc\ma nguon mo\New folder\PPK_OSDS_Khanh\geckodriver.exe"
-
-
-MY_PROFILE_PATH = r"c:\Users\Admin\AppData\Roaming\Mozilla\Firefox\Profiles\3k9cekk1.default-release"
-GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
+MY_PROFILE_PATH = r"C:\Users\lihoang14\AppData\Roaming\Mozilla\Firefox\Profiles\nsrlolhq.default-release"
 FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
+GECKO_PATH = r"D:\Khanh\hoc\ma nguon mo\New folder\PPK_OSDS_Khanh\geckodriver.exe"
+
+IMAGE_FOLDER = r"D:\Khanh\hoc\ma nguon mo\New folder\IMAGE_FOLDER"
+if not os.path.exists(IMAGE_FOLDER):
+    os.makedirs(IMAGE_FOLDER)
+# MY_PROFILE_PATH = r"c:\Users\Admin\AppData\Roaming\Mozilla\Firefox\Profiles\3k9cekk1.default-release"
+# GECKO_PATH = r"C:\Users\Admin\Desktop\TANPHAT\Manguonmotrongkhoahocjdulieu\DOAN_MNM\tiktok\geckodriver.exe"
+# FIREFOX_BINARY_PATH = r"C:\Program Files\Mozilla Firefox\firefox.exe"
 
 
 # --- Cấu hình MongoDB [NEW] ---
@@ -32,7 +35,7 @@ MONGO_URI = "mongodb://localhost:27017/"
 DB_NAME = "tiktok_ads_db"                
 COLLECTION_NAME = "creators_vn1"           
 
-TARGET_NEW_ITEMS = 2 # Số lượng muốn lấy
+TARGET_NEW_ITEMS = 10000 # Số lượng muốn lấy
 
 # =============================================================================
 # 2. KẾT NỐI MONGODB
@@ -93,37 +96,52 @@ def get_creator_id_only(card_section):
     except:
         return "N/A"
 
-
-def save_to_mongo(data_dict):
+def download_avatar(url, creator_id):
     """
-    Lưu vào MongoDB. 
-    Dùng ID làm khóa chính (_id). Nếu đã có thì cập nhật, chưa có thì thêm mới.
+    Tải ảnh từ URL -> Lưu vào folder 'downloaded_avatars' -> Trả về đường dẫn file
     """
+    if not url or url == "":
+        return ""
+    
     try:
-        # Sử dụng ID làm khóa chính (_id)
-        primary_key = data_dict["ID"] 
+        # 1. Tạo đường dẫn file
+        safe_id = "".join([c for c in creator_id if c.isalnum() or c in ('-','_','.')])
+        filename = f"{safe_id}.jpg"
+        file_path = os.path.join(IMAGE_FOLDER, filename)
         
-        if primary_key == "N/A": 
-            return 
-            
-        # Gán _id cho record để Mongo hiểu đây là khóa chính
-        data_dict["_id"] = primary_key
-        
-        # update_one với upsert=True: Tìm theo _id, nếu thấy thì update, không thấy thì insert
-        collection.update_one(
-            {"_id": primary_key}, 
-            {"$set": data_dict}, 
-            upsert=True
-        )
-        print(f" -> Saved Mongo: {primary_key}")
+        # Nếu file đã có và > 0KB thì không tải lại
+        if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+            # print(f" [Skip] Ảnh đã tồn tại: {filename}")
+            return file_path
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://www.tiktok.com/",
+            "Origin": "https://www.tiktok.com",
+            "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Sec-Fetch-Dest": "image",
+            "Sec-Fetch-Mode": "no-cors",
+            "Sec-Fetch-Site": "cross-site",
+        }
+
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            with open(file_path, 'wb') as f:
+                f.write(response.content)
+            return file_path
+        else:
+            return "" # Lỗi tải
     except Exception as e:
-        print(f"Lỗi lưu Mongo: {e}")
+        # print(f"Lỗi tải ảnh {creator_id}: {e}")
+        return ""
+
 
 def extract_full_details(card_section, creator_id):
-    """Logic trích xuất thông tin (Lấy từ code chay.py - hỗ trợ Grid View)"""
+    """Logic trích xuất thông tin """
     data = {
         "_id": creator_id,
-        # "ID": "N/A",
+         "ID": creator_id,
         "Name": "N/A",
         "Country": "N/A",
         "Collab Score": "N/A",
@@ -133,30 +151,31 @@ def extract_full_details(card_section, creator_id):
         "Engagement": "N/A",
         "Start Price": "N/A",
         "Tags": "",
-        "avatar_url" : "",
+        "avatar_url": "",      # Link gốc 
+        "avatar_local_path": "", #  Đường dẫn file trên máy 
     }
     
     try:
-        # 1. ID (sophia.beauty99)
+        # 1. ID 
         # Tìm div chứa class text-black và font-semibold
-        try:
-            id_elm = card_section.find_element(By.XPATH, ".//div[contains(@class, 'text-black') and contains(@class, 'font-semibold')]//div[contains(@class, 'truncated__text-single')]")
-            data["ID"] = id_elm.text.strip()
-        except: pass
+        # try:
+        #     id_elm = card_section.find_element(By.XPATH, ".//div[contains(@class, 'text-black') and contains(@class, 'font-semibold')]//div[contains(@class, 'truncated__text-single')]")
+        #     data["ID"] = id_elm.text.strip()
+        # except: pass
 
-        # 2. Tên (Thuỷ Sophia)
+        # 1. Tên 
         try:
             name_elm = card_section.find_element(By.XPATH, ".//div[contains(@class, 'text-neutral-onFillLow')]//div[contains(@class, 'truncated__text-single')]")
             data["Name"] = name_elm.text.strip()
         except: pass
 
-        # 3. Quốc gia
+        # 2. Quốc gia
         try:
             country_elm = card_section.find_element(By.XPATH, ".//div[contains(@class, 'truncated__text-single') and text()='Việt Nam']")
             data["Country"] = country_elm.text.strip()
         except: data["Country"] = "Unknown"
 
-        # 4. Điểm số (Collab Score)
+        # 3. Điểm số (Collab Score)
         try:
             # Tìm thẻ chứa text "Điểm cộng tác" và lấy nội dung ẩn
             collab_elm = card_section.find_element(By.XPATH, ".//*[contains(text(), 'Điểm cộng tác')]")
@@ -168,7 +187,7 @@ def extract_full_details(card_section, creator_id):
             data["Broadcast Score"] = broad_elm.get_attribute("innerText").replace("Điểm phát sóng cao:", "").strip()
         except: pass
 
-        # 5. SỐ LIỆU (Followers, Views, Engagement)
+        # 4. SỐ LIỆU (Followers, Views, Engagement)
         try:
             # Tìm TẤT CẢ các thẻ có class "text-base font-semibold" trong Card này.
             # Đây là class đặc trưng của số liệu, khác với class của ID (text-sm).
@@ -187,7 +206,7 @@ def extract_full_details(card_section, creator_id):
             # print(f"Lỗi metrics: {e}")
             pass
 
-        # 6. GIÁ TIỀN (Start Price)
+        # 5. GIÁ TIỀN (Start Price)
         try:
             # Logic: Tìm chữ "Khởi điểm từ", nhảy lên div cha, tìm div chứa số (text-base)
             price_xpath = ".//span[contains(text(), 'Khởi điểm từ')]/ancestor::div[contains(@class, 'flex-col')]//div[contains(@class, 'text-base')]"
@@ -198,7 +217,7 @@ def extract_full_details(card_section, creator_id):
         except:
             data["Start Price"] = "Thỏa thuận/Chưa đặt"
 
-        # 7. TAGS
+        # 6. TAGS
         tags = []
         try:
             # Tìm tất cả các phần tử tag text nằm trong rc-overflow
@@ -206,45 +225,46 @@ def extract_full_details(card_section, creator_id):
             tag_elms = card_section.find_elements(By.XPATH, ".//div[contains(@class, 'rc-overflow')]//div[contains(@class, 'rc-overflow-item')]//div[contains(@class, 'truncated__text-single')]")
             
             for t in tag_elms:
-                # Dùng 'textContent' thay vì 'text' để lấy được nội dung dù nó bị ẩn (opacity: 0)
                 txt = t.get_attribute("textContent").strip()
                 
-                # Lọc rác: 
-                # - Tag phải dài > 1 ký tự
-                # - Không phải là ID hay Tên (tránh trùng class)
-                # - Không chứa dấu '+' (loại bỏ nút +4, +3...)
                 if txt and len(txt) > 1 and txt != data["ID"] and txt != data["Name"] and "+" not in txt:
                     tags.append(txt)
                     
         except Exception as e:
-            # print(f"Lỗi lấy tags: {e}")
             pass
         
         # Loại bỏ trùng lặp và nối chuỗi
         data["Tags"] = ", ".join(list(set(tags)))
         
-        # 8. Avatar URL (FIXED)
+        # 7. Avatar
         try:
-            avatar_img = card_section.find_element(
-                By.XPATH,
-                ".//div[contains(@class,'creator-avatar__wrapper')]//img"
-            )
+            avatar_img = card_section.find_element(By.XPATH, ".//div[contains(@class,'creator-avatar__wrapper')]//img")
+            
+            # Ưu tiên lấy data-src (ảnh gốc)
+            raw_url = avatar_img.get_attribute("data-src")
+            if not raw_url:
+                raw_url = avatar_img.get_attribute("src")
 
-            # Ưu tiên data-src (lazy load), fallback src
-            avatar_url = (
-                avatar_img.get_attribute("data-src")
-                or avatar_img.get_attribute("src")
-                or ""
-            )
+            # Gọi hàm tải ảnh
+            if raw_url:
+                raw_url = raw_url.strip()
+            
+            data["avatar_url"] = raw_url or ""
 
-            data["avatar_url"] = avatar_url.strip()
+            # Gọi hàm tải ảnh MỚI
+            if raw_url:
+                # Thêm log để biết nó có chui vào đây không
+                # print(f" -> Đang thử tải ảnh cho: {creator_id}...") 
+                local_path = download_avatar(raw_url, creator_id)
+                data["avatar_local_path"] = local_path
+            else:
+                print(f" [!] Không tìm thấy URL ảnh cho {creator_id}")
+                
+        except Exception as e:
+            print(f"Lỗi phần avatar: {e}")
+            pass
 
-        except Exception:
-            data["avatar_url"] = ""
-
-    except Exception:
-        pass
-    
+    except Exception: pass
     return data
 
 # =============================================================================
@@ -272,7 +292,7 @@ wait = WebDriverWait(driver, 20)
 action = ActionChains(driver)
 
 try:
-    driver.get("https://ads.tiktok.com/creative/forpartners/creator/explore?region=row")
+    driver.get("https://ads.tiktok.com/creative/creator/explore?region=row")
     driver.maximize_window()
     time.sleep(5)
 
@@ -299,22 +319,20 @@ try:
     print("\n--- BẮT ĐẦU CÀO DỮ LIỆU ---")
     
     new_items_count = 0
-    consecutive_duplicates = 0 # Đếm số lượng trùng liên tiếp để quyết định scroll nhanh
+    consecutive_duplicates = 0 
     last_highest_index = -1
     retry_scroll = 0
     
-    # Chờ load
     try:
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-index='0']")))
     except: pass
 
     while new_items_count < TARGET_NEW_ITEMS:
-        
-        # [UPGRADE] Check Anti-Ban: Nếu đã cào được mỗi 100 người mới, nghỉ 2 phút
+        #  nghỉ 2 phút giải lao
         if new_items_count > 0 and new_items_count % 100 == 0:
             print(f"\n>>> [ANTI-BAN] Đã lấy {new_items_count} người. Nghỉ giải lao 60 giây...")
             time.sleep(60)
-            # Sau khi ngủ, scroll nhẹ để bot tưởng người dùng quay lại
+            # fake human
             driver.execute_script("window.scrollBy(0, -200);")
             time.sleep(2)
 
@@ -381,7 +399,6 @@ try:
                 driver.execute_script("window.scrollBy(0, 1000);")
                 
             if retry_scroll > 15:
-                print("\nĐã hết danh sách hoặc bị chặn tải.")
                 break
         else:
             retry_scroll = 0
