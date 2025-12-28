@@ -19,9 +19,7 @@ Hệ thống có khả năng:
 ## Cấu trúc dự án
 
 ```text
-tiktok-crawler-project/
-├── assets/
-│   └── avatars/                 # Ảnh đại diện tải về được lưu tại đây
+tiktok-crawler-project/             
 ├── config/
 │   ├── settings.py              # Cấu hình đường dẫn, database, selenium
 ├── src/
