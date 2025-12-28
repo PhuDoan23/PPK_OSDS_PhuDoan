@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from config.settings import MONGO_URI, DB_NAME, COLLECTION_NAME
+from config.setting import MONGO_URI, DB_NAME, COLLECTION_NAME
 
 class MongoDBConnector:
     def __init__(self):

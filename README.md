@@ -25,7 +25,9 @@ tiktok-crawler-project/
 ├── src/
 │   ├── bot_engine.py            # Logic chính của Selenium Bot
 │   ├── db_connector.py          # Module kết nối MongoDB
+│   ├── avatar_encoder.py        # Lấy dữ liệu hình ảnh
 │   └── cleaner.py               # Module làm sạch dữ liệu và tải ảnh
 ├── main.py                      # File khởi chạy chương trình
+├── Analysis.ipynb               # File phân tích dữ liệu sau khi thu thập
 ├── requirements.txt             # Danh sách thư viện cần thiết
 └── README.md                    # Tài liệu hướng dẫn
